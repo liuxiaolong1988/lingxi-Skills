@@ -1,7 +1,7 @@
-# Lingxi Memory - 灵曦记忆系统
+# OpenClaw Skill: Lingxi Memory - 灵曦记忆系统
 
 > 基于 OpenClaw + 飞书的 AI 记忆解决方案
-> 实现会话级自动提炼与跨会话记忆同步
+> OpenClaw Agent 专用记忆系统
 
 ## 简介
 

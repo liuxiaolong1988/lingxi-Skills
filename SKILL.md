@@ -1,13 +1,13 @@
 ---
-name: lingxi-memory
+name: openclaw-lingxi-memory
 description: |
-  灵曦记忆系统 - AI 会话自动提炼与跨会话记忆同步
+  OpenClaw Skill - 灵曦记忆系统 / Lingxi Memory
   
-  结合飞书 IM 和飞书官方插件（多维表格、云文档）实现 AI 助手自动记忆功能。
+  基于 OpenClaw + 飞书的 AI 记忆解决方案，会话级自动提炼与跨会话记忆同步。
   
   适用场景：
-  - AI 助手需要跨会话记住用户偏好和项目进展
-  - 自动从对话中提取任务、项目和知识
+  - OpenClaw Agent 需要跨会话记住用户偏好和项目进展
+  - AI 助手需要自动从对话中提取任务、项目和知识
   - 会话结束后自动保存到飞书知识库
   
   技术栈：

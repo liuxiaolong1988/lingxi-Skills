@@ -2,10 +2,11 @@
 # MindVault 会话结束监听脚本
 # 监听会话目录，检测会话结束并触发提炼
 
-# ========== 配置区域（请根据实际情况修改）==========
+# ========== 配置区域（环境变量）==========
 SESSIONS_DIR="${OPENCLAW_SESSIONS_DIR:-~/.openclaw/agents/main/sessions}"
 EXTRACTED_FILE="${MEMORY_EXTRACTED:-~/.openclaw/workspace/memory/.extracted_sessions}"
 LOG_FILE="${MEMORY_LOG:-~/.openclaw/workspace/logs/session_watch.log}"
+EXTRACT_SCRIPT="${EXTRACT_SCRIPT:-/path/to/do_extract.sh}"  # 修改为实际路径
 # =================================================
 
 log() {
@@ -44,8 +45,8 @@ inotifywait -m -e moved_to -e create "$SESSIONS_DIR" 2>&1 | while read -r dir ac
         log "  -> 已提炼，跳过"
     else
         log "  -> 触发提炼..."
-        # 调用提炼脚本（请根据实际路径调整）
-        bash /path/to/do_extract.sh "$SESSION_KEY" "$session_id"
+        # 调用提炼脚本（使用环境变量或默认路径）
+        bash "$EXTRACT_SCRIPT" "$SESSION_KEY" "$session_id"
         echo "$SESSION_KEY" >> "$EXTRACTED_FILE"
         log "  -> 提炼完成"
     fi

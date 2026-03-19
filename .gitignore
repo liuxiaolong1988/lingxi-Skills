@@ -1,0 +1,14 @@
+# 环境变量配置（敏感）
+.env
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+*.tmp
+
+# OpenClaw 本地文件（如果和解压的 skill 在一起）
+.memory/
+sessions/

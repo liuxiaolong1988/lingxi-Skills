@@ -10,6 +10,24 @@ description: |
   - AI 助手需要自动从对话中提取任务、项目和知识
   - 会话结束后自动保存到飞书知识库
   
+  依赖工具（需安装）：
+  - inotify-tools（文件监听）
+  - jq（JSON 处理）
+  - openclaw CLI（已内置）
+  
+  环境变量（必须配置）：
+  - FEISHU_APP_TOKEN - 飞书应用 Token
+  - FEISHU_USER_OPEN_ID - 飞书用户 open_id
+  - L2_APP_TOKEN - 飞书多维表格 App Token
+  - L2_TABLE_ID - 飞书多维表格 Table ID
+  - L3_DOC_ID - 飞书云文档 Doc ID（L3-项目记忆）
+  - L4_DOC_ID - 飞书云文档 Doc ID（L4-知识沉淀）
+  
+  数据安全说明：
+  - 本 Skill 会读取本地 OpenClaw 会话文件
+  - 对话内容通过 OpenClaw AI 提炼后同步到飞书
+  - 请确保你知晓并同意此数据流向
+  
   技术栈：
   - OpenClaw（AI Agent 框架）
   - 飞书 IM（消息推送）

@@ -1,31 +1,38 @@
 #!/bin/bash
 # MindVault 提炼脚本 - 执行会话内容 AI 提炼并保存到 L2-L4
-# 版本: v1.0 - 通用版
+# 版本: v1.1 - 环境变量版
 # 
 # 使用前提：
-# 1. 安装 inotify-tools: apt install inotify-tools
-# 2. 配置飞书多维表格和云文档（见配置文件）
-# 3. 配置 OpenClaw message 接口
+# 1. 安装依赖: apt install inotify-tools jq
+# 2. 配置环境变量（必须）
+# 3. 配置飞书多维表格和云文档
 
-# ========== 配置区域（请根据实际情况修改）==========
-SESSION_KEY="$1"
-SESSION_ID="$2"
-LOG_FILE="${MEMORY_LOG:-~/.openclaw/workspace/logs/session_extract.log}"
+# ========== 环境变量配置（必需）==========
+# 飞书用户 ID
+FEISHU_USER_OPEN_ID="${FEISHU_USER_OPEN_ID:?请设置 FEISHU_USER_OPEN_ID 环境变量}"
 
-# 飞书配置
-USER_OPEN_ID="ou_xxxxxxxx"           # 替换为实际用户 open_id
-L2_APP_TOKEN="xxxxxxxxxxxx"            # 飞书多维表格 App Token
-L2_TABLE_ID="tblxxxxxxxxxxxx"          # 飞书多维表格 Table ID
-L3_DOC_ID="xxxxxxxxxxxx"               # 飞书云文档 Doc ID（L3-项目记忆）
-L4_DOC_ID="xxxxxxxxxxxx"              # 飞书云文档 Doc ID（L4-知识沉淀）
+# 飞书多维表格（L2-任务待办）
+L2_APP_TOKEN="${L2_APP_TOKEN:?请设置 L2_APP_TOKEN 环境变量}"
+L2_TABLE_ID="${L2_TABLE_ID:?请设置 L2_TABLE_ID 环境变量}"
 
-# OpenClaw 配置
+# 飞书云文档（L3/L4）
+L3_DOC_ID="${L3_DOC_ID:?请设置 L3_DOC_ID 环境变量}"
+L4_DOC_ID="${L4_DOC_ID:?请设置 L4_DOC_ID 环境变量}"
+
+# OpenClaw 目录
 OPENCLAW_DIR="${OPENCLAW_DIR:-$HOME/.openclaw}"
-# =================================================
+
+# 日志目录
+LOG_FILE="${MEMORY_LOG:-$OPENCLAW_DIR/workspace/logs/session_extract.log}"
+# ==========================================
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
+
+# 获取参数
+SESSION_KEY="$1"
+SESSION_ID="$2"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
@@ -186,7 +193,7 @@ log "$REPORT"
 echo "$REPORT" > "/tmp/extract_report_${SESSION_ID}.txt"
 
 # 发送消息提醒（通过 OpenClaw message 接口）
-openclaw message send --channel feishu --target "$USER_OPEN_ID" --message "$REPORT" 2>&1 || true
+openclaw message send --channel feishu --target "$FEISHU_USER_OPEN_ID" --message "$REPORT" 2>&1 || true
 
 # 清理
 rm -f /tmp/extract_actions.txt

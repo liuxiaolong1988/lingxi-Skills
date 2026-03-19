@@ -3,18 +3,20 @@
 # 由 HEARTBEAT 调用，处理 L2-L4 保存
 # 
 # 使用前提：
-# 1. 配置飞书多维表格和云文档 token
-# 2. 配置 OpenClaw feishu_bitable 和 feishu_update_doc 接口
+# 1. 配置环境变量
+# 2. 安装 feishu_bitable 和 feishu_update_doc 工具
 
-# ========== 配置区域（请根据实际情况修改）==========
+# ========== 环境变量配置（必需）==========
 QUEUE_FILE="/tmp/extract_queue.txt"
 
-# 飞书配置
-L2_APP_TOKEN="xxxxxxxxxxxx"            # 飞书多维表格 App Token
-L2_TABLE_ID="tblxxxxxxxxxxxx"          # 飞书多维表格 Table ID
-L3_DOC_ID="xxxxxxxxxxxx"               # 飞书云文档 Doc ID（L3-项目记忆）
-L4_DOC_ID="xxxxxxxxxxxx"              # 飞书云文档 Doc ID（L4-知识沉淀）
-# =================================================
+# 飞书多维表格（L2-任务待办）
+L2_APP_TOKEN="${L2_APP_TOKEN:?请设置 L2_APP_TOKEN 环境变量}"
+L2_TABLE_ID="${L2_TABLE_ID:?请设置 L2_TABLE_ID 环境变量}"
+
+# 飞书云文档（L3/L4）
+L3_DOC_ID="${L3_DOC_ID:?请设置 L3_DOC_ID 环境变量}"
+L4_DOC_ID="${L4_DOC_ID:?请设置 L4_DOC_ID 环境变量}"
+# ==========================================
 
 echo "检查提炼队列..."
 
@@ -32,7 +34,7 @@ while IFS='|' read -r action data1 data2 data3; do
     case "$action" in
         "L2")
             echo "创建 L2 任务: $data1 ($data2, $data3)"
-            # 调用飞书多维表格 API（使用 feishu_bitable 工具）
+            # 调用飞书多维表格 API
             feishu_bitable_app_table_record action="create" \
                 app_token="$L2_APP_TOKEN" \
                 table_id="$L2_TABLE_ID" \
@@ -40,7 +42,7 @@ while IFS='|' read -r action data1 data2 data3; do
             ;;
         "L3")
             echo "更新 L3 项目: $data1 - $data2"
-            # 调用飞书文档 API（使用 feishu_update_doc 工具）
+            # 调用飞书文档 API
             feishu_update_doc doc_id="$L3_DOC_ID" mode="append" \
                 markdown="\n### $data1 | $data2\n- $data3" 2>&1
             ;;

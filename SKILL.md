@@ -1,8 +1,8 @@
 ---
 name: lingxi-memory-save
-description: "【⚠️ 安全提示】本技能会读取本地 OpenClaw 会话文件，提取对话内容后通过 AI 提炼，并同步至飞书。请确保您已知晓并同意该数据流向。\n\n【核心功能】会话提炼与记忆保存：1) 文件监听触发 2) AI 自动分析 3) L2-L4 保存。L1原始会话由OpenClaw自动保存。"
+description: "【⚠️ 安全提示】本技能会读取本地 OpenClaw 会话文件，提取对话内容后通过 AI 提炼，并同步至飞书。请确保您已知晓并同意该数据流向。\n\n【核心功能】会话提炼与记忆保存：1) 文件监听触发 2) AI 自动分析 3) L2-L4 保存。L1原始会话由OpenClaw自动保存。\n\n【安全特性】\n- 脱敏处理：仅提取消息关键词，不发送完整对话\n- 最小权限：建议创建飞书专用应用，只给最小数据权限\n- 普通用户运行：不使用root，建议专用低权限用户"
 author: 灵曦 (Linxi)
-homepage: https://github.com/your-repo/lingxi-memory-save
+homepage: https://github.com/liuxiaolong1988/lingxi-Skills
 required_envs:
   - FEISHU_USER_OPEN_ID  # 飞书用户ID，用于推送消息
   - L2_APP_TOKEN        # 飞书多维表格App Token（L2任务看板）
@@ -28,7 +28,7 @@ required_tools:
 **核心功能**：文件监听触发 + AI 自动分析 + L2-L4 保存
 
 - **L1 原始会话**：OpenClaw 自动保存在本地 `sessions/` 目录，append-only
-- **L2-L4 自动提炼**：会话结束自动触发，无需审批
+- **L2-L4 自动提炼**：会话结束自动触发，无需逐次审批
 - **L5 规则审批**：识别到规则变更时，需用户审批后生效
 
 ---
@@ -46,9 +46,18 @@ sudo apt-get install -y jq inotify-tools
 which jq inotifywait
 ```
 
-### 2. 配置环境变量
+### 2. 配置飞书凭证（安全建议）
 
-在 `.env` 或 shell 配置文件中设置：
+**推荐：创建专用飞书应用，最小权限**
+
+1. 创建专用飞书应用（仅用于记忆同步）
+2. 只授权必要的权限：
+   - 多维表格：读写权限
+   - 云文档：读写权限  
+   - 消息推送：发送权限
+3. 定期（建议每90天）轮换 Token
+
+**配置环境变量**：
 
 ```bash
 # 飞书用户ID（必需）
@@ -65,12 +74,49 @@ export L3_DOC_ID="xxxxxxxxxxxx"
 export L4_DOC_ID="xxxxxxxxxxxx"
 ```
 
-### 3. 配置定时任务
+### 3. 配置定时任务（安全建议）
+
+**⚠️ 重要：使用普通用户，不要使用 root**
 
 ```bash
 # 每5分钟检查会话提炼
-*/5 * * * * bash /root/.openclaw/workspace/scripts/session_extract.sh >> /root/.openclaw/workspace/logs/session_extract.log 2>&1
+# 建议创建专用用户（如 openclaw）运行，不要用 root
+
+# 编辑当前用户的 crontab
+crontab -e
+
+# 添加以下行（假设 openclaw 是运行用户）：
+*/5 * * * * openclaw /home/openclaw/.openclaw/workspace/scripts/session_extract.sh >> /home/openclaw/.openclaw/workspace/logs/session_extract.log 2>&1
 ```
+
+**安全要点**：
+- 使用非 root 用户运行
+- 日志文件放在该用户的目录下
+- 确保会话目录对该用户可读
+
+---
+
+## 🔒 脱敏处理说明
+
+### 提取逻辑
+
+脚本只提取以下信息：
+- 用户消息的**关键词**
+- AI 任务/项目/知识标记
+- **不发送**完整对话内容
+
+### 具体处理步骤
+
+1. **过滤元信息**：去除 System、Conversation info、Sender 等元数据
+2. **提取正文**：只保留用户实际发送的消息内容
+3. **AI 提炼**：调用本地 AI 分析，只提取结构化信息（任务/项目/知识）
+4. **结果存储**：只保存提炼结果，不保存原始对话
+
+### 安全约束
+
+- 原始会话文件保留在本地，不外发
+- 只外发 AI 提炼后的结构化摘要
+- 不发送手机号、邮箱等敏感信息
 
 ---
 
@@ -129,23 +175,37 @@ HEARTBEAT 处理队列 → 飞书 API
 | `do_extract.sh` | AI 提炼脚本 |
 | `process_extract_queue.sh` | 队列处理脚本 |
 | `memory/.extracted_sessions` | 已提炼记录 |
-| `/tmp/extract_queue.txt` | 待处理队列 |
+| `/tmp/extract_queue.txt` | 待处理队列（重启后自动清理） |
 
 ---
 
 ## 🔐 安全说明
 
-1. **数据流向**：本地会话 → AI提炼 → 飞书
-2. **权限控制**：仅读取指定目录，临时文件存 /tmp
-3. **脱敏处理**：查询结果自动隐藏敏感信息
-4. **无自启动**：仅通过 cron 定时触发
+### 1. 数据安全
+- 原始会话保存在本地，不外发
+- 只外发 AI 提炼后的结构化摘要
+- 脱敏处理：去除元信息，只提取关键词
+
+### 2. 凭证安全
+- 建议创建飞书专用应用，只给最小数据权限
+- 定期（建议每90天）轮换 Token
+- 不要在代码中硬编码凭证，使用环境变量
+
+### 3. 权限安全
+- 使用普通用户运行，不要使用 root
+- 确保只授予必要权限
+- 定期检查运行日志
+
+### 4. 临时文件
+- 队列文件存 /tmp，重启后自动清理
+- 日志文件定期轮换
 
 ---
 
 ## 📝 版本信息
 
 - **作者**: 灵曦 (Linxi)
-- **版本**: v4.0
+- **版本**: 1.0.2
 - **更新**: 2026-03-19
 
 ---

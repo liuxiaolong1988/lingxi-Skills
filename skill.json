@@ -1,0 +1,7 @@
+{
+  "name": "Lingxi-MindVault 灵曦记忆系统",
+  "description": "自动记忆提炼 & 写入飞书知识库。定时扫描 OpenClaw 会话文件，自动提炼有价值的记忆，写入飞书多维表格/云文档知识库。",
+  "author": "liuxiaolong1988",
+  "license": "MIT",
+  "tags": ["memory", "feishu", "lark", "automation", "openclaw"]
+}

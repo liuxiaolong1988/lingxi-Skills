@@ -156,11 +156,11 @@ for session_file in "$SESSIONS_DIR"/*.jsonl "$SESSIONS_DIR"/*.jsonl.*; do
     
     # 去重：检查是否已经处理过这个session_id
     if grep -q "^${session_id}$" "$PROCESSED_SESSIONS" 2>/dev/null; then
-        log "跳过重复会话: $session_id"
+        log "跳过重复会话（同一session_id多个文件）: $session_id -> $session_file"
         continue
     fi
     
-    # 标记为已处理
+    # 标记为已处理（同一个session_id只处理一次，不管有多少个后缀文件）
     echo "$session_id" >> "$PROCESSED_SESSIONS"
     
     # 获取当前 heartbeat 会话的 sessionFile，并跳过对应的文件
@@ -208,6 +208,7 @@ except:
     
     # 检查是否已提炼过
     if grep -q "^agent:main:session:${session_id}$" "$EXTRACTED_FILE" 2>/dev/null; then
+        log "跳过已提炼会话: $session_id"
         continue
     fi
     

@@ -185,10 +185,11 @@ L4|踩坑记录|问题现象|错误信息|排查过程|解决方案|如何规避
 提炼完成后，请你：
 1. 按照你输出的提炼结果，**直接调用对应的 OpenClaw 工具** 将内容写入记忆空间：
    - L2 任务：调用 feishu_bitable_app_table_record 写入 L2 看板（app_token=DdCMbcIrWawtlisBGwTcDEnznis, table_id=tblBUwBgMLH7BRXk）
+     ⚠️ **重要**：L2 任务必须包含「创建时间」字段！使用当前北京时间（Asia/Shanghai），格式：年月日（如 2026/03/24）
    - L3 项目：调用 feishu_update_doc 写入 L3 项目文档（doc_id=DgJXw7AsJiWw3VkEEZec0T2wnrh），mode=append
    - L4 知识：调用 feishu_update_doc 写入 L4 知识文档（doc_id=OWOLwZ8CFiKv6akDfX2c3OQOnFe），mode=append
 
-**重要：** 生成时间戳时，请使用 **Asia/Shanghai 时区（GMT+8）**，不要使用 UTC 时间！格式：`YYYY-MM-DD HH:MM:SS`
+**⚠️ 非常重要 - 时区要求：** 生成时间戳时，请**必须**使用 **Asia/Shanghai 时区（GMT+8 / 北京时间）**，**绝对不要**使用 UTC 时间！当前北京时间是 $(date +"%Y-%m-%d %H:%M:%S") 请参考这个时间，格式：`YYYY-MM-DD HH:MM:SS`
 
 2. 所有写入完成后，调用 message 工具发送通知给我：
    - 参数：action=send, channel=feishu, target="user:ou_97d6f0bcc1bde8e3cc4f188ed574b3f9", message="消息内容"

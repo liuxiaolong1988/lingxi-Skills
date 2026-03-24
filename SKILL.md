@@ -1,3 +1,24 @@
+---
+name: Lingxi-MindVault 灵曦记忆系统
+description: 自动记忆提炼 & 写入飞书知识库。定时扫描 OpenClaw 会话文件，自动提炼有价值的记忆，写入飞书多维表格/云文档知识库。
+author: liuxiaolong1988
+license: MIT
+tags: memory, feishu, lark, automation, openclaw
+required_env:
+  - FEISHU_USER_OPEN_ID
+  - L2_APP_TOKEN
+  - L2_TABLE_ID
+  - L3_DOC_ID
+  - L4_DOC_ID
+optional_env:
+  - SESSIONS_DIR
+  - NOTIFY_TARGET
+requires:
+  - openclaw
+  - python3
+  - bash
+---
+
 # Lingxi-MindVault - 灵曦记忆系统：自动记忆提炼 & 写入飞书知识库
 
 ## 描述

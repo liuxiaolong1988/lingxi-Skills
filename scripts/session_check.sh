@@ -7,6 +7,7 @@
 # - 跳过已提炼会话
 # - 进程锁防止多个实例同时运行
 # - 会话去重（避免同一个会话被处理多次）
+# - 防重复调用：新增 "正在处理中" 标记，解决频繁检查导致的重复调用问题
 
 # 加载环境变量
 WORKSPACE="/root/.openclaw/workspace"
@@ -17,6 +18,7 @@ fi
 # 配置
 SESSIONS_DIR="/root/.openclaw/agents/main/sessions"
 EXTRACTED_FILE="$WORKSPACE/memory/.extracted_sessions"
+PROCESSING_FILE="$WORKSPACE/memory/.processing_sessions"
 SCRIPT_DIR="$WORKSPACE/scripts"
 DO_EXTRACT_SCRIPT="$SCRIPT_DIR/do_extract_and_write.sh"
 SESSIONS_JSON="$SESSIONS_DIR/sessions.json"
@@ -122,6 +124,7 @@ fi
 # 确保目录和文件存在
 mkdir -p "$(dirname "$EXTRACTED_FILE")"
 touch "$EXTRACTED_FILE"
+touch "$PROCESSING_FILE"
 rm -f "$PROCESSED_SESSIONS" 2>/dev/null
 touch "$PROCESSED_SESSIONS"
 
@@ -212,28 +215,59 @@ except:
         continue
     fi
     
+    # 检查是否正在处理中（已经有提炼进程在运行）
+    if grep -q "^agent:main:session:${session_id}$" "$PROCESSING_FILE" 2>/dev/null; then
+        # 检查处理是否超时（超过30分钟认为是死锁，清理掉）
+        # 读取行最后记录的时间戳，格式: agent:main:session:xxx timestamp
+        # 如果文件中没有时间戳，默认600秒（10分钟）超时
+        local processing_age=600
+        if [ -n "$(grep "^agent:main:session:${session_id} [0-9]\+$" "$PROCESSING_FILE" 2>/dev/null)" ]; then
+            local timestamp=$(grep "^agent:main:session:${session_id} [0-9]\+$" "$PROCESSING_FILE" | awk '{print $2}')
+            local now=$(date +%s)
+            processing_age=$((now - timestamp))
+        fi
+        if [ "$processing_age" -lt 1800 ]; then  # 30分钟超时
+            log "跳过正在处理中的会话: $session_id (已处理 ${processing_age} 秒)"
+            continue
+        else
+            log "警告: 会话处理超时（${processing_age} 秒），清理标记后重试"
+            sed -i "/^agent:main:session:${session_id}/d" "$PROCESSING_FILE" 2>/dev/null
+        fi
+    fi
+    
     # 发现未提炼会话！
     log "发现未提炼会话: $session_id"
+    # 标记为正在处理中，防止其他检查进程重复处理
+    echo "agent:main:session:${session_id} $(date +%s)" >> "$PROCESSING_FILE"
     
     # 发送通知（只在第一次发现时）
     send_notification "发现未提炼会话: $session_id，正在处理..."
     
     # ========== 真实调用 ==========
-    # 静默调用提炼脚本（不输出到stdout）
-    log "调用提炼脚本处理会话: $session_id"
-    "$DO_EXTRACT_SCRIPT" "$session_file" >/dev/null 2>&1
-    extract_exit_code=$?
+    # 后台运行提炼脚本，避免阻塞检查流程导致重复调用
+    # 问题根源：AI提炼需要很长时间，如果同步调用/同进程等待，下一次检查会在提炼完成前触发，导致重复调用
+    log "后台启动提炼脚本处理会话: $session_id"
+    (
+        # 执行提炼脚本
+        "$DO_EXTRACT_SCRIPT" "$session_file" >/tmp/extract_${session_id}.log 2>&1
+        extract_exit_code=$?
+        # 无论成功失败，都先从「正在处理」列表移除
+        sed -i "/^agent:main:session:${session_id}/d" "$PROCESSING_FILE" 2>/dev/null
+        # 提炼成功（含过滤跳过），标记到「已提炼」列表，下次直接跳过
+        if [ $extract_exit_code -eq 0 ]; then
+            echo "agent:main:session:${session_id}" >> "$EXTRACTED_FILE"
+            log "会话处理完成: $session_id"
+        else
+            # 提炼失败，不标记到「已提炼」，下次检查会重试
+            log "会话处理失败，下次重试: $session_id (退出码: $extract_exit_code)"
+        fi
+    ) &
+    # 短暂等待，避免CPU争抢
+    sleep 0.2
     # =============================
-    
-    # 检查提炼结果
-    if [ $extract_exit_code -eq 0 ]; then
-        # 返回0：成功或跳过，都标记为已处理
-        log "会话处理完成: $session_id"
-        echo "agent:main:session:${session_id}" >> "$EXTRACTED_FILE"
-    else
-        # 返回非0：错误，不标记，下次再试
-        log "会话处理失败，下次重试: $session_id (退出码: $extract_exit_code)"
-    fi
+
+    # 注意：这里不等待提炼完成，标记工作交给后台进程
+    # 通过「PROCESSING_FILE」保证同一个会话同一时间只会有一个提炼进程在运行
 done
 
 log "会话检查完成"

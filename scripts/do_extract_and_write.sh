@@ -13,9 +13,18 @@
 WORKSPACE="/root/.openclaw/workspace"
 SCRIPT_DIR="$WORKSPACE/scripts"
 EXTRACTED_FILE="$WORKSPACE/memory/.extracted_sessions"
-# USER_OPEN_ID: 你的飞书 open_id，从环境变量读取，如果没有则使用默认值
-# 在 .env 文件中可以设置 FEISHU_USER_OPEN_ID=ou_xxx
-USER_OPEN_ID="${FEISHU_USER_OPEN_ID:-ou_97d6f0bcc1bde8e3cc4f188ed574b3f}"
+# 全部从环境变量读取，用户必须在 .env 中配置这些参数
+# FEISHU_USER_OPEN_ID: 你的飞书 open_id（用于接收通知）
+# L2_APP_TOKEN: L2 任务看板 多维表格 app_token
+# L2_TABLE_ID: L2 任务看板 数据表 ID
+# L3_DOC_ID: L3 项目日志 飞书文档 ID
+# L4_DOC_ID: L4 知识沉淀 飞书文档 ID
+# 所有 ID 都必须配置，无默认值
+USER_OPEN_ID="${FEISHU_USER_OPEN_ID:?必须配置 FEISHU_USER_OPEN_ID 环境变量}"
+L2_APP_TOKEN="${L2_APP_TOKEN:?必须配置 L2_APP_TOKEN 环境变量}"
+L2_TABLE_ID="${L2_TABLE_ID:?必须配置 L2_TABLE_ID 环境变量}"
+L3_DOC_ID="${L3_DOC_ID:?必须配置 L3_DOC_ID 环境变量}"
+L4_DOC_ID="${L4_DOC_ID:?必须配置 L4_DOC_ID 环境变量}"
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 返回值界定
@@ -184,15 +193,15 @@ L4|踩坑记录|问题现象|错误信息|排查过程|解决方案|如何规避
 
 提炼完成后，请你：
 1. 按照你输出的提炼结果，**直接调用对应的 OpenClaw 工具** 将内容写入记忆空间：
-   - L2 任务：调用 feishu_bitable_app_table_record 写入 L2 看板（app_token=DdCMbcIrWawtlisBGwTcDEnznis, table_id=tblBUwBgMLH7BRXk）
+   - L2 任务：调用 feishu_bitable_app_table_record 写入 L2 看板（app_token=$L2_APP_TOKEN, table_id=$L2_TABLE_ID)
      ⚠️ **重要**：L2 任务必须包含「创建时间」字段！使用当前北京时间（Asia/Shanghai），格式：年月日（如 2026/03/24）
-   - L3 项目：调用 feishu_update_doc 写入 L3 项目文档（doc_id=DgJXw7AsJiWw3VkEEZec0T2wnrh），mode=append
-   - L4 知识：调用 feishu_update_doc 写入 L4 知识文档（doc_id=OWOLwZ8CFiKv6akDfX2c3OQOnFe），mode=append
+   - L3 项目：调用 feishu_update_doc 写入 L3 项目文档（doc_id=$L3_DOC_ID），mode=append
+   - L4 知识：调用 feishu_update_doc 写入 L4 知识文档（doc_id=$L4_DOC_ID），mode=append
 
 **⚠️ 非常重要 - 时区要求：** 生成时间戳时，请**必须**使用 **Asia/Shanghai 时区（GMT+8 / 北京时间）**，**绝对不要**使用 UTC 时间！当前北京时间是 $(date +"%Y-%m-%d %H:%M:%S") 请参考这个时间，格式：`YYYY-MM-DD HH:MM:SS`
 
 2. 所有写入完成后，调用 message 工具发送通知给我：
-   - 参数：action=send, channel=feishu, target="user:ou_97d6f0bcc1bde8e3cc4f188ed574b3f9", message="消息内容"
+   - 参数：action=send, channel=feishu, target="user:$USER_OPEN_ID", message="消息内容"
    - 如果提炼成功且有内容写入，发送格式：
 
 ## 提炼结果

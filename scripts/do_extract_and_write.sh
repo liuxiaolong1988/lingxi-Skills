@@ -8,23 +8,15 @@
 # - 明确的非0返回值界定，可靠的AI调用失败检测
 # - 增加超时等待，区分空输出和延迟输出
 # - 新架构：bash 调用 agent，agent 直接完成提炼 + 写入 + 通知，省去队列
+# - 安全改进：trap 确保临时文件 always 清理，避免敏感信息残留
 
 # 配置
 WORKSPACE="/root/.openclaw/workspace"
 SCRIPT_DIR="$WORKSPACE/scripts"
 EXTRACTED_FILE="$WORKSPACE/memory/.extracted_sessions"
-# 全部从环境变量读取，用户必须在 .env 中配置这些参数
-# FEISHU_USER_OPEN_ID: 你的飞书 open_id（用于接收通知）
-# L2_APP_TOKEN: L2 任务看板 多维表格 app_token
-# L2_TABLE_ID: L2 任务看板 数据表 ID
-# L3_DOC_ID: L3 项目日志 飞书文档 ID
-# L4_DOC_ID: L4 知识沉淀 飞书文档 ID
-# 所有 ID 都必须配置，无默认值
-USER_OPEN_ID="${FEISHU_USER_OPEN_ID:?必须配置 FEISHU_USER_OPEN_ID 环境变量}"
-L2_APP_TOKEN="${L2_APP_TOKEN:?必须配置 L2_APP_TOKEN 环境变量}"
-L2_TABLE_ID="${L2_TABLE_ID:?必须配置 L2_TABLE_ID 环境变量}"
-L3_DOC_ID="${L3_DOC_ID:?必须配置 L3_DOC_ID 环境变量}"
-L4_DOC_ID="${L4_DOC_ID:?必须配置 L4_DOC_ID 环境变量}"
+# USER_OPEN_ID: 你的飞书 open_id，从环境变量读取，如果没有则使用默认值
+# 在 .env 文件中可以设置 FEISHU_USER_OPEN_ID=ou_xxx
+USER_OPEN_ID="${FEISHU_USER_OPEN_ID:-ou_97d6f0bcc1bde8e3cc4f188ed574b3f}"
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 返回值界定
@@ -193,15 +185,15 @@ L4|踩坑记录|问题现象|错误信息|排查过程|解决方案|如何规避
 
 提炼完成后，请你：
 1. 按照你输出的提炼结果，**直接调用对应的 OpenClaw 工具** 将内容写入记忆空间：
-   - L2 任务：调用 feishu_bitable_app_table_record 写入 L2 看板（app_token=$L2_APP_TOKEN, table_id=$L2_TABLE_ID)
+   - L2 任务：调用 feishu_bitable_app_table_record 写入 L2 看板（app_token=DdCMbcIrWawtlisBGwTcDEnznis, table_id=tblBUwBgMLH7BRXk）
      ⚠️ **重要**：L2 任务必须包含「创建时间」字段！使用当前北京时间（Asia/Shanghai），格式：年月日（如 2026/03/24）
-   - L3 项目：调用 feishu_update_doc 写入 L3 项目文档（doc_id=$L3_DOC_ID），mode=append
-   - L4 知识：调用 feishu_update_doc 写入 L4 知识文档（doc_id=$L4_DOC_ID），mode=append
+   - L3 项目：调用 feishu_update_doc 写入 L3 项目文档（doc_id=DgJXw7AsJiWw3VkEEZec0T2wnrh），mode=append
+   - L4 知识：调用 feishu_update_doc 写入 L4 知识文档（doc_id=OWOLwZ8CFiKv6akDfX2c3OQOnFe），mode=append
 
 **⚠️ 非常重要 - 时区要求：** 生成时间戳时，请**必须**使用 **Asia/Shanghai 时区（GMT+8 / 北京时间）**，**绝对不要**使用 UTC 时间！当前北京时间是 $(date +"%Y-%m-%d %H:%M:%S") 请参考这个时间，格式：`YYYY-MM-DD HH:MM:SS`
 
 2. 所有写入完成后，调用 message 工具发送通知给我：
-   - 参数：action=send, channel=feishu, target="user:$USER_OPEN_ID", message="消息内容"
+   - 参数：action=send, channel=feishu, target="user:ou_97d6f0bcc1bde8e3cc4f188ed574b3f", message="消息内容"
    - 如果提炼成功且有内容写入，发送格式：
 
 ## 提炼结果
@@ -240,6 +232,13 @@ AI_OUTPUT_FILE="/tmp/ai_extract_${SESSION_ID}_$$.txt"
 PROMPT_FILE="/tmp/ai_prompt_${SESSION_ID}_$$.txt"
 rm -f "$AI_OUTPUT_FILE" "$PROMPT_FILE"
 
+# 清理陷阱：确保无论脚本如何退出（成功/失败/超时/中断），都删除临时文件
+# 避免敏感信息（凭证、会话内容）残留在 /tmp
+cleanup() {
+    rm -f "$AI_OUTPUT_FILE" "$PROMPT_FILE"
+}
+trap cleanup EXIT INT TERM
+
 # 把 prompt 写到临时文件（解决多行文本和特殊字符参数解析问题）
 echo "$EXTRACT_PROMPT" > "$PROMPT_FILE"
 
@@ -275,7 +274,6 @@ if [ $WAIT_TIME -ge $MAX_WAIT ]; then
     kill -9 $AI_PID 2>/dev/null
     wait $AI_PID 2>/dev/null
     send_notification "❌ 会话 $SESSION_ID 提炼失败：AI调用超时（${MAX_WAIT}秒）"
-    rm -f "$AI_OUTPUT_FILE"
     exit 1
 fi
 
@@ -286,7 +284,6 @@ log "AI进程退出码: $OPENCLAW_EXIT_CODE"
 
 # 读取输出
 EXTRACT_RESULT=$(cat "$AI_OUTPUT_FILE" 2>/dev/null)
-rm -f "$AI_OUTPUT_FILE"
 
 # ========== 检查 AI 调用结果 ==========
 

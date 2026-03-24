@@ -246,10 +246,11 @@ except:
     # ========== 真实调用 ==========
     # 后台运行提炼脚本，避免阻塞检查流程导致重复调用
     # 问题根源：AI提炼需要很长时间，如果同步调用/同进程等待，下一次检查会在提炼完成前触发，导致重复调用
+    # 日志由cron统一记录到系统log，不在/tmp留存敏感的会话日志
     log "后台启动提炼脚本处理会话: $session_id"
     (
         # 执行提炼脚本
-        "$DO_EXTRACT_SCRIPT" "$session_file" >/tmp/extract_${session_id}.log 2>&1
+        "$DO_EXTRACT_SCRIPT" "$session_file"
         extract_exit_code=$?
         # 无论成功失败，都先从「正在处理」列表移除
         sed -i "/^agent:main:session:${session_id}/d" "$PROCESSING_FILE" 2>/dev/null

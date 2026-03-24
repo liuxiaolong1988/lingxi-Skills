@@ -13,7 +13,8 @@
 - ✅ 自动过滤空会话/小会话（用户消息数 < 1 或内容长度 < 20）
 - ✅ 完整的异常处理和通知，每个阶段都有错误通知
 - ✅ 超时支持 300 秒（5分钟），适应大会话
-- ✅ 开源友好，所有配置通过环境变量指定，默认配置开箱即用
+- ✅ 开源友好，**所有配置通过环境变量指定**，无硬编码敏感信息
+- ✅ 启动检查，如果缺少必需环境变量会立即报错，不会静默使用错误配置
 - ✅ 原子进程锁，防止重复运行
 - ✅ 过期锁自动清理，不会死锁
 
@@ -126,21 +127,32 @@ skill/lingxi-memory/
 └── do_extract_and_write.sh           # AI 提炼 + 写入脚本
 ```
 
-## 环境变量配置
+## 环境变量配置（必填）
 
-在 `.env` 文件中设置：
+**你必须在 `workspace/.env` 文件中配置以下环境变量**，否则脚本无法运行：
 
 ```bash
-# 你的飞书 open_id（必填，默认已经设置好，可以覆盖）
+# 你的飞书 open_id（必填，用于接收通知）
 export FEISHU_USER_OPEN_ID="ou_xxxxxxxxxxxxxxxxxx"
-# L2 任务看板 多维表格
-export L2_APP_TOKEN="DdCMbcIrWawtlisBGwTcDEnznis"
-export L2_TABLE_ID="tblBUwBgMLH7BRXk"
-# L3 项目日志 飞书文档
-export L3_DOC_ID="DgJXw7AsJiWw3VkEEZec0T2wnrh"
-# L4 知识沉淀 飞书文档
-export L4_DOC_ID="OWOLwZ8CFiKv6akDfX2c3OQOnFe"
+# L2 任务看板：飞书多维表格 app_token（必填）
+export L2_APP_TOKEN="your_l2_app_token"
+# L2 任务看板：数据表 ID（必填）
+export L2_TABLE_ID="your_l2_table_id"
+# L3 项目日志：飞书云文档 doc_id（必填）
+export L3_DOC_ID="your_l3_doc_id"
+# L4 知识沉淀：飞书云文档 doc_id（必填）
+export L4_DOC_ID="your_l4_doc_id"
+
+# 可选配置：OpenClaw 会话目录（默认：/root/.openclaw/agents/main/sessions）
+# export SESSIONS_DIR="/path/to/your/sessions"
+# 可选配置：通知目标（默认：user:$FEISHU_USER_OPEN_ID）
+# export NOTIFY_TARGET="user:ou_xxxxxxxxxxxxxxxxxx"
 ```
+
+**重要安全提示**：
+- 不要使用默认提供的示例 ID，那是作者的飞书资源
+- 必须替换为你自己的飞书多维表格和文档 ID
+- 如果不配置，脚本会启动失败并提示你缺少环境变量，这是正常的安全设计
 
 ## 通知格式
 

@@ -15,8 +15,7 @@ if [ -f "$WORKSPACE/.env" ]; then
 fi
 
 # 配置
-# 默认 OpenClaw 会话目录，可通过环境变量覆盖
-SESSIONS_DIR="${SESSIONS_DIR:-/root/.openclaw/agents/main/sessions}"
+SESSIONS_DIR="/root/.openclaw/agents/main/sessions"
 EXTRACTED_FILE="$WORKSPACE/memory/.extracted_sessions"
 SCRIPT_DIR="$WORKSPACE/scripts"
 DO_EXTRACT_SCRIPT="$SCRIPT_DIR/do_extract_and_write.sh"
